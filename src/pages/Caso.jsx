@@ -1,8 +1,7 @@
-  import React, { useState, useEffect } from "react";
-  import "../styles/Caso.css";
+import React, { useState, useEffect } from "react";
+import "../styles/Caso.css";
 
-const Caso = () => {
-  const [casoSeleccionado, setCasoSeleccionado] = useState(null); // nuevo estado
+const Caso = ({ onCasoSeleccionado }) => {
   const [listaExpedientes, setListaExpedientes] = useState([]);
   const [nombreBusqueda, setNombreBusqueda] = useState("");
   const [apellidoBusqueda, setApellidoBusqueda] = useState("");
@@ -20,7 +19,6 @@ const Caso = () => {
   const [loading, setLoading] = useState(false);
   const [especializaciones, setEspecializaciones] = useState([]);
 
-  // Traer especializaciones al montar el componente
   useEffect(() => {
     const fetchEspecializaciones = async () => {
       const res = await fetch("http://localhost:8000/api/caso/especializaciones/");
@@ -30,188 +28,169 @@ const Caso = () => {
     fetchEspecializaciones();
   }, []);
 
-  // Buscar cliente
-const buscarCliente = async () => {
-  if (!nombreBusqueda || !apellidoBusqueda) return alert("Debe ingresar nombre y apellido");
+  const buscarCliente = async () => {
+    if (!nombreBusqueda || !apellidoBusqueda) return alert("Debe ingresar nombre y apellido");
 
-  setLoading(true);
-  try {
-    const res = await fetch("http://localhost:8000/api/caso/buscar_cliente/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nomcliente: nombreBusqueda,
-        apellcliente: apellidoBusqueda
-      }),
-    });
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/caso/buscar_cliente/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nomcliente: nombreBusqueda,
+          apellcliente: apellidoBusqueda
+        }),
+      });
 
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || "Error al buscar cliente");
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Error al buscar cliente");
+      }
+
+      const data = await res.json();
+      setCliente(data.cliente);
+      setDocumento(data.cliente.doc || "");
+      setCasosCliente(data.casos_cliente || []);
+
+      const formatoFecha = (fecha) => fecha ? fecha.split("T")[0] : "";
+
+      if (data.caso_activo) {
+        setFormCaso({
+          numero: data.caso_activo.nocaso,
+          fechaInicio: formatoFecha(data.caso_activo.inicio),
+          especializacion: data.caso_activo.esp || "",
+          valor: data.caso_activo.valor ?? "",
+          fechaFin: formatoFecha(data.caso_activo.fin)
+        });
+        setEsNuevoCaso(false);
+      } else {
+        setFormCaso({
+          numero: "",
+          fechaInicio: "",
+          fechaFin: "",
+          especializacion: "",
+          valor: ""
+        });
+        setEsNuevoCaso(true);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+    setLoading(false);
+  };
+
+  const seleccionarCaso = async (e) => {
+    const nocaso = parseInt(e.target.value, 10); 
+    if (!nocaso) {
+      setFormCaso({ numero: "", fechaInicio: "", fechaFin: "", especializacion: "", valor: "" });
+      setEsNuevoCaso(true);
+      onCasoSeleccionado && onCasoSeleccionado(null);
+      return;
     }
 
-    const data = await res.json();
+    try {
+      const casoLocal = casosCliente.find(c => c.nocaso === nocaso);
+      if (!casoLocal) return;
 
-    setCliente(data.cliente);
-    setDocumento(data.cliente.doc || "");
-    setCasosCliente(data.casos_cliente || []);
-
-    // Formatear la fecha para el input type="date"
-    const formatoFecha = (fecha) => fecha ? fecha.split("T")[0] : "";
-
-    if (data.caso_activo) {
       setFormCaso({
-        numero: data.caso_activo.nocaso,
-        fechaInicio: formatoFecha(data.caso_activo.inicio),
-        especializacion: data.caso_activo.esp || "",
-        valor: data.caso_activo.valor ?? "", // si es null, poner string vacío
-        fechaFin: formatoFecha(data.caso_activo.fin)
+        numero: casoLocal.nocaso,
+        fechaInicio: casoLocal.inicio.split("T")[0],
+        fechaFin: casoLocal.fin ? casoLocal.fin.split("T")[0] : "",
+        especializacion: casoLocal.especializacion || casoLocal.esp || "",
+        valor: casoLocal.valor ?? ""
       });
       setEsNuevoCaso(false);
-    } else {
+
+      const res = await fetch(`http://localhost:8000/api/caso/buscar_caso/${nocaso}`);
+      const data = await res.json();
+
+      // Pasar el caso seleccionado al componente padre (App)
+      onCasoSeleccionado && onCasoSeleccionado({
+        caso: data.caso,
+        lista_expedientes: data.lista_expedientes || []
+      });
+
+      console.log("Caso seleccionado:", data);
+
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
+  const crearNuevoCaso = async () => {
+    if (!cliente) return alert("Debe buscar primero un cliente");
+
+    try {
+      const res = await fetch("http://localhost:8000/api/caso/crear_caso/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codcliente: cliente.cod,
+          nomcliente: cliente.nom,
+          apellcliente: cliente.ape,
+          ndocumento: cliente.doc
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Error al crear el caso");
+      }
+
+      const data = await res.json();
+      
       setFormCaso({
-        numero: "",
-        fechaInicio: "",
+        numero: data.nocaso,
+        fechaInicio: new Date().toISOString().split("T")[0],
         fechaFin: "",
         especializacion: "",
         valor: ""
       });
+
       setEsNuevoCaso(true);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
+  const guardarCaso = async () => {
+    if (!formCaso.numero || !formCaso.especializacion || !formCaso.valor) {
+      return alert("Todos los campos son obligatorios");
     }
 
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  }
-  setLoading(false);
-};
+    try {
+      const res = await fetch("http://localhost:8000/api/caso/guardar_caso/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nocaso: formCaso.numero,
+          codcliente: cliente.cod,
+          especializacion: formCaso.especializacion,
+          valor: formCaso.valor
+        }),
+      });
 
+      const data = await res.json();
 
-  // Seleccionar caso del desplegable
-const seleccionarCaso = async (e) => {
-  const nocaso = parseInt(e.target.value, 10); 
-  if (!nocaso) {
-    setFormCaso({ numero: "", fechaInicio: "", fechaFin: "", especializacion: "", valor: "" });
-    setEsNuevoCaso(true);
-    setCasoSeleccionado(null); // limpiar caso
-    return;
-  }
+      if (!res.ok) {
+        throw new Error(data.error || "Error al guardar el caso");
+      }
 
-  try {
-    // Buscar datos del caso en tu lista de casos del cliente
-    const casoLocal = casosCliente.find(c => c.nocaso === nocaso);
-    if (!casoLocal) return;
-
-    setFormCaso({
-      numero: casoLocal.nocaso,
-      fechaInicio: casoLocal.inicio.split("T")[0],
-      fechaFin: casoLocal.fin ? casoLocal.fin.split("T")[0] : "",
-      especializacion: casoLocal.especializacion || casoLocal.esp || "",
-      valor: casoLocal.valor ?? ""
-    });
-    setEsNuevoCaso(false);
-
-    // Traer expedientes desde backend
-    const res = await fetch(`http://localhost:8000/api/caso/buscar_caso/${nocaso}`);
-    const data = await res.json();
-
-    // Construir objeto que espera Expediente.jsx
-    setCasoSeleccionado({
-      caso: data.caso,               // <-- aquí va el objeto del caso
-      lista_expedientes: data.lista_expedientes || []
-    });
-
-    console.log("Caso seleccionado:", data);
-
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  }
-};
-
-
-
-
-  // Crear nuevo caso
-// Crear nuevo caso
-const crearNuevoCaso = async () => {
-  if (!cliente) return alert("Debe buscar primero un cliente");
-
-  try {
-    const res = await fetch("http://localhost:8000/api/caso/crear_caso/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        codcliente: cliente.cod,
-        nomcliente: cliente.nom,
-        apellcliente: cliente.ape,
-        ndocumento: cliente.doc
-      }),
-    });
-
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || "Error al crear el caso");
+      alert(data.mensaje);
+      buscarCliente();
+      setEsNuevoCaso(false);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
     }
-
-    const data = await res.json();
-    
-    // Actualizar el formulario con el nuevo caso
-    setFormCaso({
-      numero: data.nocaso,
-      fechaInicio: new Date().toISOString().split("T")[0], // fecha de hoy
-      fechaFin: "",
-      especializacion: "",
-      valor: ""
-    });
-
-    setEsNuevoCaso(true);
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  }
-};
-
-// Guardar caso
-const guardarCaso = async () => {
-  if (!formCaso.numero || !formCaso.especializacion || !formCaso.valor) {
-    return alert("Todos los campos son obligatorios");
-  }
-
-  try {
-    const res = await fetch("http://localhost:8000/api/caso/guardar_caso/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nocaso: formCaso.numero,
-        codcliente: cliente.cod,
-        especializacion: formCaso.especializacion,
-        valor: formCaso.valor
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Error al guardar el caso");
-    }
-
-    alert(data.mensaje);
-
-    // Actualizar la lista de casos del cliente y limpiar formulario
-    buscarCliente();
-    setEsNuevoCaso(false);
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  }
-};
-
-
+  };
 
   return (
     <div className="caso-container">
-      {/* ---------------- COLUMNA IZQUIERDA: CASO ---------------- */}
       <div className="columna">
         <label>No. Caso</label>
         <div className="fila-label-btn">
@@ -266,7 +245,6 @@ const guardarCaso = async () => {
         </div>
       </div>
 
-      {/* ---------------- COLUMNA DERECHA: CLIENTE ---------------- */}
       <div className="columna">
         <label>Cliente</label>
         <div className="fila-input">
