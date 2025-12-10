@@ -1,0 +1,113 @@
+.caso-container {
+  display: flex;
+  gap: 40px;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+}
+
+/* Columna general */
+.columna {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Etiquetas */
+label {
+  font-weight: bold;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+/* Inputs y selects */
+input, select {
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Filas flexibles */
+.fila-label-btn, 
+.fila-valor,
+.fila-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Inputs o selects que ocupan toda la fila */
+.fila-valor input,
+.fila-label-btn select,
+.fila-label-btn input {
+  flex: 1;
+}
+
+/* Botones */
+.btn-lupa,
+.btn-crear-cliente,
+.btn-crear-caso,
+.btn-acuerdo,
+.btn-guardar {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  white-space: nowrap;
+  transition: background 0.3s ease;
+}
+
+/* Colores particulares */
+.btn-lupa {
+  background: #444;
+  color: #fff;
+}
+
+.btn-crear-cliente {
+  background: #2b7bff;
+  color: #fff;
+}
+
+.btn-crear-caso {
+  background: #2bcc71;
+  color: #fff;
+}
+
+.btn-acuerdo {
+  background: #6b3b00;
+  color: #fff;
+}
+
+.btn-guardar {
+  margin-top: 30px;
+  background: #ff8c00;
+  color: #fff;
+  width: 130px;
+  align-self: flex-end;
+}
+
+/* Hover para botones */
+.btn-lupa:hover { background: #222; }
+.btn-crear-cliente:hover { background: #1a5dcc; }
+.btn-crear-caso:hover { background: #22b65d; }
+.btn-acuerdo:hover { background: #533000; }
+.btn-guardar:hover { background: #e67c00; }
+
+/* Ajustes para la fila de cliente */
+.fila-input input {
+  flex: 1;
+}
+
+.fila-input button {
+  flex-shrink: 0;
+}
+
+/* Opcional: estilos para el select de casos activos */
+select option[disabled] {
+  color: #999;
+}
